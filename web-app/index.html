@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGuard for Kids</title>
+    <style>
+        /* Modern Reset & Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 35px;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        /* Input Section */
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #667eea;
+        }
+
+        .check-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .check-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+
+        .check-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Results Section */
+        #result-area {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            margin-top: 20px;
+        }
+
+        /* Animation class to trigger fade-in */
+        #result-area.visible {
+            opacity: 1;
+        }
+
+        .result-card {
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            text-align: left;
+        }
+
+        .result-card.safe {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .result-card.blocked {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-icon {
+            font-size: 48px;
+            margin-right: 20px;
+        }
+
+        .result-title {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .result-details {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ SafeGuard for Kids</h1>
+            <p class="subtitle">Protecting children from inappropriate online content</p>
+        </header>
+
+        <div class="input-group">
+            <input type="text" id="urlInput" placeholder="Enter website URL to check (e.g., wikipedia.org)" />
+            <div id="errorMsg" class="error-message"></div>
+            <button id="checkBtn" class="check-btn">Check Website Safety</button>
+        </div>
+
+        <div id="loadingSpinner" class="spinner"></div>
+
+        <div id="result-area">
+            <!-- Results injected here -->
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const checkBtn = document.getElementById('checkBtn');
+        const resultArea = document.getElementById('result-area');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Allow Enter key to submit
+        urlInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkUrl();
+            }
+        });
+
+        checkBtn.addEventListener('click', checkUrl);
+
+        async function checkUrl() {
+            const url = urlInput.value.trim();
+
+            // basic validation
+            if (!url) {
+                showError('Please enter a website URL');
+                return;
+            }
+
+            // Reset UI
+            hideError();
+            resultArea.style.display = 'none';
+            resultArea.classList.remove('visible');
+            loadingSpinner.style.display = 'block';
+            checkBtn.disabled = true;
+            checkBtn.innerText = 'Analyzing website...';
+
+            try {
+                const response = await fetch('http://localhost:3000/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                displayResult(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error checking URL. Is the server running?');
+            } finally {
+                loadingSpinner.style.display = 'none';
+                checkBtn.disabled = false;
+                checkBtn.innerText = 'Check Website Safety';
+            }
+        }
+
+        function displayResult(data) {
+            resultArea.innerHTML = ''; // Clear previous
+
+            const isBlocked = data.blocked;
+            const containerClass = isBlocked ? 'blocked' : 'safe';
+            const icon = isBlocked ? '🚫' : '✅';
+            const title = isBlocked ? 'BLOCKED - Inappropriate Content' : 'SAFE - Kid-Friendly Content';
+
+            let detailsHtml = '';
+
+            if (isBlocked) {
+                detailsHtml = `
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Category:</span>
+                            <span>${data.category}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Reason:</span>
+                            <span>${data.reason}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Severity:</span>
+                            <span>${data.severity}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                detailsHtml = `
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <span>${data.reason}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="result-card ${containerClass}">
+                    <div class="result-header">
+                        <div class="status-icon">${icon}</div>
+                        <div class="result-info">
+                            <div class="result-title">${title}</div>
+                        </div>
+                    </div>
+                    ${detailsHtml}
+                </div>
+            `;
+
+            resultArea.innerHTML = html;
+            resultArea.style.display = 'block';
+            // Slight delay to allow display:block to apply before opacity transition
+            setTimeout(() => {
+                resultArea.classList.add('visible');
+            }, 10);
+        }
+
+        function showError(msg) {
+            errorMsg.innerText = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMsg.style.display = 'none';
+        }
+
+        // AUTO-GUARD LOGIC: Check for redirect params
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('blocked') === 'true') {
+                const url = params.get('url');
+                const category = params.get('category') || 'Restricted Content';
+                const reason = params.get('reason') || 'Blocked by SafeGuard Automation';
+                const severity = params.get('severity') || 'HIGH';
+
+                if (url) urlInput.value = url;
+
+                displayResult({
+                    blocked: true,
+                    category: category,
+                    reason: reason,
+                    severity: severity
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
