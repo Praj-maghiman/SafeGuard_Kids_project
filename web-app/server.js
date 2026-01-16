@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = 'AIzaSyDvprQF5t8RxwS_qe2XmUd1leAxqfLPsV8'; // Get from https://console.cloud.google.com
+const API_KEY = ''; // Get from https://console.cloud.google.com
 
 // Middleware
 app.use(cors());
